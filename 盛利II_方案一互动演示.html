@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盛利II 提取方案互动演示</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+         background:#FBFAF7; color:#1a1a1a; margin:0; padding:18px 12px 30px; }
+  .wrap { max-width:860px; margin:0 auto; }
+  h2 { color:#0F2C52; font-size:20px; margin:0 0 2px; }
+  .sub { color:#666; font-size:12.5px; margin-bottom:14px; }
+  .kpis { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .kpi { flex:1; min-width:118px; background:#fff; border:1px solid #E5E2D8; border-radius:10px; padding:10px 12px; }
+  .kpi .v { font-size:20px; font-weight:700; color:#9E2B25; }
+  .kpi .l { font-size:11px; color:#777; margin-top:2px; }
+  .kpi.blue .v { color:#0F2C52; }
+  .kpi.green .v { color:#2E7D6B; }
+  .stages { display:flex; align-items:stretch; gap:4px; margin:6px 0 4px; flex-wrap:wrap; }
+  .seg { border-radius:8px; padding:8px 4px; text-align:center; color:#fff; font-size:11px; line-height:1.35; }
+  .seg b { display:block; font-size:12px; }
+  .sliderRow { display:flex; align-items:center; gap:12px; margin:16px 0 6px; }
+  input[type=range] { flex:1; accent-color:#9E2B25; height:26px; }
+  .ageLabel { font-size:15px; font-weight:700; color:#0F2C52; min-width:64px; text-align:right; }
+  .panel { background:#fff; border:1px solid #E5E2D8; border-radius:12px; padding:14px 16px; margin-top:12px; }
+  .row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #EEE; font-size:14px; gap:12px;}
+  .row:last-child { border-bottom:none; }
+  .row .val { font-weight:700; text-align:right; }
+  .note { font-size:10.5px; color:#999; margin-top:12px; line-height:1.6; }
+  .badge { display:inline-block; background:#9E2B25; color:#fff; font-size:11.5px; border-radius:20px; padding:3px 12px; margin-bottom:6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>盛利II 储蓄保险–至尊 ｜ 提取方案互动演示</h2>
+  <div class="sub">被保人 0 岁男 ｜ 年缴 10 万美金 × 5 年（总投入 50 万）｜ 拖动滑杆查看任意年龄</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">50万</div><div class="l">总投入（美金）</div></div>
+    <div class="kpi"><div class="v">850万</div><div class="l">累计提取总额</div></div>
+    <div class="kpi green"><div class="v">622万</div><div class="l">80岁账户剩余（非保证）</div></div>
+    <div class="kpi blue"><div class="v">2,191万</div><div class="l">100岁账户剩余（非保证）</div></div>
+  </div>
+
+  <div class="stages" id="stages"></div>
+
+  <div class="sliderRow">
+    <input type="range" id="age" min="0" max="100" value="30">
+    <div class="ageLabel" id="ageLabel">30岁</div>
+  </div>
+
+  <div class="panel">
+    <div class="badge" id="stageName">—</div>
+    <div class="row"><span>本年龄提取款项</span><span class="val" id="wd" style="color:#9E2B25;">—</span></div>
+    <div class="row"><span>累计已提取</span><span class="val" id="cum" style="color:#9E2B25;">—</span></div>
+    <div class="row"><span>提取后账户剩余价值（非保证）</span><span class="val" id="rem" style="color:#0F2C52;">—</span></div>
+  </div>
+
+  <div class="note">注：剩余价值按安盛建议书补充摘要数据点线性插值，仅供演示；红利为非保证，实际金额或高于或低于所示数值。提取假设于相关保单年度终结时进行，年龄为被保人年龄。数据取自建议书（保单货币：美金）。</div>
+</div>
+
+<script>
+  var WD = {};
+  for (var a=18;a<=22;a++) WD[a]=100000;
+  WD[30]=500000; WD[40]=500000; WD[50]=1000000;
+  for (var a=51;a<=60;a++) WD[a]=150000;
+  for (var a=61;a<=70;a++) WD[a]=200000;
+  for (var a=71;a<=80;a++) WD[a]=250000;
+
+  var REM = [[22,1041723],[30,1485089],[40,2287718],[50,3294362],[60,4159806],[70,5109644],[80,6217898],[100,21909668]];
+  function remAt(age){
+    if (age<=5) return 0;
+    if (age<22){ var r=(age-5)/17; return Math.round(1041723*r*r); }
+    for (var i=0;i<REM.length-1;i++){
+      if (age>=REM[i][0] && age<=REM[i+1][0])
+        return Math.round(REM[i][1]+(REM[i+1][1]-REM[i][1])*(age-REM[i][0])/(REM[i+1][0]-REM[i][0]));
+    }
+    return REM[REM.length-1][1];
+  }
+  function fmt(n){ return n.toLocaleString('en-US'); }
+  function stageInfo(a){
+    if (a<5) return ['缴费期 · 每年投入10万','#0F2C52'];
+    if (a<18) return ['增值期 · 锁定复利滚存','#8A8F98'];
+    if (a<=22) return ['教育金 · 每年领10万','#B8860B'];
+    if (a===30) return ['而立之年 · 一次性领50万','#9E2B25'];
+    if (a===40) return ['事业高峰 · 一次性领50万','#9E2B25'];
+    if (a===50) return ['半百储备 · 一次性领100万','#9E2B25'];
+    if (a<=60) return ['退休初期 · 每年领15万','#2E7D6B'];
+    if (a<=70) return ['退休中期 · 每年领20万','#2E7D6B'];
+    if (a<=80) return ['退休后期 · 每年领25万','#2E7D6B'];
+    return ['传承期 · 账户继续增值','#0F2C52'];
+  }
+  var segs = [
+    {t:'教育金',a:'10万/年',c:'#B8860B',w:2},
+    {t:'30岁',a:'50万',c:'#9E2B25',w:1.5},
+    {t:'40岁',a:'50万',c:'#9E2B25',w:1.5},
+    {t:'50岁',a:'100万',c:'#9E2B25',w:1.8},
+    {t:'51-60岁',a:'15万/年',c:'#2E7D6B',w:2.2},
+    {t:'61-70岁',a:'20万/年',c:'#2E7D6B',w:2.2},
+    {t:'71-80岁',a:'25万/年',c:'#2E7D6B',w:2.2},
+  ];
+  var cont = document.getElementById('stages');
+  segs.forEach(function(g){
+    var el=document.createElement('div');
+    el.className='seg'; el.style.background=g.c; el.style.flex=g.w;
+    el.innerHTML='<b>'+g.t+'</b>'+g.a;
+    cont.appendChild(el);
+  });
+  function update(){
+    var a = +document.getElementById('age').value;
+    var c=0; for (var k in WD) if (+k<=a) c+=WD[k];
+    var wd = WD[a]||0;
+    document.getElementById('ageLabel').textContent = a+'岁';
+    document.getElementById('wd').textContent = wd>0 ? '$'+fmt(wd) : '—（本年度不提取）';
+    document.getElementById('cum').textContent = '$'+fmt(c);
+    document.getElementById('rem').textContent = '$'+fmt(remAt(a));
+    var s = stageInfo(a), b = document.getElementById('stageName');
+    b.textContent = s[0]; b.style.background = s[1];
+  }
+  document.getElementById('age').addEventListener('input',update);
+  update();
+</script>
+</body>
+</html>
